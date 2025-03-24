@@ -123,6 +123,7 @@ public class PullDataTiki {
                             Gson gson = new Gson();
                             JsonObject jsonObjectProduct = gson.fromJson(dataProduct, JsonObject.class);
                             JsonArray array = jsonObjectProduct.getAsJsonArray("data");
+                            System.out.println(array.size());
                                 if (array.size()==1){
                                     JsonObject object=array.get(0).getAsJsonObject();
                                     String name = object.get("name").getAsString();
@@ -139,8 +140,8 @@ public class PullDataTiki {
                                     count=count + 1;
                                 } else {
                                     for (int ob = 0;ob<array.size();ob++){
-                                    
-                                    JsonObject object=array.get(i).getAsJsonObject();
+                                        
+                                    JsonObject object=array.get(ob).getAsJsonObject();
                                     if (
                                             object.has("name") &&
                                             object.getAsJsonObject("visible_impression_info").getAsJsonObject("amplitude").has("origin") &&
@@ -190,6 +191,7 @@ public class PullDataTiki {
         String name = "";
         String urlPhuKienSo = "https://tiki.vn/api/v2/categories?parent_id=1815";
         String urlDienThoai = "https://tiki.vn/api/v2/categories?parent_id=1789";
+        String urlLaptop = "https://tiki.vn/api/v2/categories?parent_id=1846";
         OkHttpClient client =new OkHttpClient();
         Request requestPhuKienSo = new Request.Builder()
                 .url(urlPhuKienSo)
@@ -199,17 +201,25 @@ public class PullDataTiki {
                 .url(urlDienThoai)
                 .get()
                 .build();
+        Request requestLaptop = new Request.Builder()
+                .url(urlLaptop)
+                .get()
+                .build();
         try (   Response responsePhuKienSo = client.newCall(requestPhuKienSo).execute();
                 Response responseDienThoai = client.newCall(requestDienThoai).execute();
+                Response responseLaptop = client.newCall(requestLaptop).execute();
             ) {
-            if (responsePhuKienSo.isSuccessful() && responsePhuKienSo.body()!= null && responseDienThoai.isSuccessful() && responseDienThoai.body()!= null){
+            if (responsePhuKienSo.isSuccessful() && responsePhuKienSo.body()!= null && responseDienThoai.isSuccessful() && responseDienThoai.body()!= null && responseLaptop.isSuccessful() && responseLaptop.body()!= null){
                 String dataPhuKienSo = responsePhuKienSo.body().string();
                 String dataDienThoai = responseDienThoai.body().string();
+                String dataLaptop = responseLaptop.body().string();
                 Gson gson = new Gson();
                 JsonObject jsonObjectPhuKienSo = gson.fromJson(dataPhuKienSo,JsonObject.class);
                 JsonObject jsonObjectDienThoai = gson.fromJson(dataDienThoai,JsonObject.class);
+                JsonObject jsonObjectLaptop = gson.fromJson(dataLaptop, JsonObject.class);
                 JsonArray arrayPhuKienSo = jsonObjectPhuKienSo.getAsJsonArray("data");
                 JsonArray arrayDienThoai = jsonObjectDienThoai.getAsJsonArray("data");
+                JsonArray arrayLaptop = jsonObjectLaptop.getAsJsonArray("data");
                 for (int i = 0; i<arrayPhuKienSo.size(); i++){
                     JsonObject object = arrayPhuKienSo.get(i).getAsJsonObject();
                     id = object.get("id").getAsString();
@@ -224,6 +234,18 @@ public class PullDataTiki {
                 }
                 for (int i = 0; i<arrayDienThoai.size(); i++){
                     JsonObject object = arrayDienThoai.get(i).getAsJsonObject();
+                    id = object.get("id").getAsString();
+                    name = object.get("name").getAsString();
+                    System.out.println(id + name);
+                    String sql = "INSERT IGNORE INTO group_merchandise (Group_Merchandise_ID, Merchandise_Name) VALUES (?, ?)";
+                    PreparedStatement preStatement = conn.prepareStatement(sql);
+                    preStatement.setString(1,id);
+                    preStatement.setString(2,name);
+                    preStatement.executeUpdate();
+                    
+                }
+                for (int i = 0; i<arrayLaptop.size(); i++){
+                    JsonObject object = arrayLaptop.get(i).getAsJsonObject();
                     id = object.get("id").getAsString();
                     name = object.get("name").getAsString();
                     System.out.println(id + name);
@@ -334,11 +356,19 @@ public class PullDataTiki {
         try {
             Connection conn = DriverManager.getConnection(url, USER, PASSWORD);
             String sql = "SHOW DATABASES LIKE '"+dbname+"'";
+            String sqlSelect = "SELECT * FROM products"; 
             Statement stm= conn.createStatement();
             ResultSet rs = stm.executeQuery(sql);
-            if (rs.next()){
-                addProductsDataToDB();
+            ResultSet rsSelect = stm.executeQuery(sqlSelect);
+//            if (rs.next()){
+//                addProductsDataToDB();
+//                  addGroupMerchandiseToDB();
+//            }
+            int count = 0;
+            while (rsSelect.next()){
+                count++;
             }
+            System.out.println(count);
             
         } catch (SQLException ex) {
             Logger.getLogger(PullDataTiki.class.getName()).log(Level.SEVERE, null, ex);
