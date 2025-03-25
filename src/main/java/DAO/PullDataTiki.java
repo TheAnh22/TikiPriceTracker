@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  */
 
-package com.mycompany.pulldatatiki;
+package DAO;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -14,7 +14,6 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -25,8 +24,8 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -137,7 +136,10 @@ public class PullDataTiki {
     private static void addPriceRecordToDB() throws SQLException{
         Connection conn = null;
         conn = DriverManager.getConnection(url, USER, PASSWORD);
-        String sqlSelectDate = "SELECT * FROM price_record WHERE Price_Date='2025-03-25'";
+        LocalDate now = LocalDate.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+        String sqlSelectDate = "SELECT * FROM price_record WHERE Price_Date='" + now.format(formatter) +"'";
+        
         PreparedStatement stmPriceSelect = conn.prepareStatement(sqlSelectDate);
         ResultSet rs=stmPriceSelect.executeQuery();
         if(rs.next()){
@@ -396,6 +398,12 @@ public class PullDataTiki {
             System.out.println("EMPTY");
         }else{
             System.out.println("SUCCESS");
+            try {
+//                addProductsDataToDB();
+                addPriceRecordToDB();
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
         }
     }
 }
