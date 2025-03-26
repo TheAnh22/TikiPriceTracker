@@ -216,7 +216,7 @@ public class PullDataTiki {
         Group_Mechandise_ID= new ArrayList<>();
         
         Connection conn = null;
-        int count = 0;
+        
         try {
             conn =DriverManager.getConnection(url, USER, PASSWORD);
         } catch (SQLException e) {
@@ -232,7 +232,7 @@ public class PullDataTiki {
                 Group_Mechandise_ID.add(rs.getString("Group_Merchandise_ID"));
             }
             for (int i = 0; i<Group_Mechandise_ID.size();i++){
-                count = 0;
+                
                 for (int page = 1; page<=10 ; page++){
                     String urlProduct = "https://tiki.vn/api/personalish/v1/blocks/listings?limit=40&category="+ Group_Mechandise_ID.get(i) +"&page="+Integer.toString(page);
                     System.out.println(urlProduct);
@@ -282,7 +282,7 @@ public class PullDataTiki {
                                             stmPrice.setString(2,price);
                                             stmPrice.setDate(3, Date.valueOf(LocalDate.now()));
                                             stmPrice.executeUpdate();
-                                            count=count + 1;
+                                            
                                         
                                         }
                                     }
@@ -294,7 +294,7 @@ public class PullDataTiki {
                             System.out.println("lỗi");
                         }
                 }                 
-                System.out.println("Dữ liệu đã lấy:"+count);
+                
             }
             
         } catch (SQLException ex) {
@@ -402,7 +402,7 @@ public class PullDataTiki {
         }else{
             System.out.println("SUCCESS");
             try {
-//                addProductsDataToDB();
+                addProductsDataToDB();
                 addPriceRecordToDB();
             } catch (SQLException ex) {
                 ex.printStackTrace();
