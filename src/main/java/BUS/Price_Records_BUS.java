@@ -4,10 +4,18 @@
  */
 package BUS;
 
+import DAO.Price_Records_DAO;
+import Objects.Price_Records;
+import java.util.ArrayList;
+
 /**
  *
  * @author The Anh
  */
 public class Price_Records_BUS {
+    private Price_Records_DAO price_records_dao = new Price_Records_DAO();
     
+    public ArrayList<Price_Records> getAllPriceRecord(){
+        return price_records_dao.getAllPriceRecord();
+    }
 }

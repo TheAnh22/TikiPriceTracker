@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  */
 
-package DAO;
+package BUS;
 
 import Objects.Products;
 import Objects.Group_Merchandise;
@@ -214,7 +214,7 @@ public class PullDataTiki {
     //Thêm sản phẩm vào database    //Thêm sản phẩm vào database
     private static void addProductsDataToDB(){
         Group_Mechandise_ID= new ArrayList<>();
-        
+        Products_BUS products_bus = new Products_BUS();
         Connection conn = null;
         
         try {
@@ -267,23 +267,16 @@ public class PullDataTiki {
                                             String id = object.get("id").getAsString() ;
                                             String category = Group_Mechandise_ID.get(i);
                                             String price = object.get("price").getAsString();
-                                            
-                                            String sqlInsertProduct = "INSERT IGNORE INTO products (Product_ID, Group_Merchandise_ID, Product_Name, Origin) VALUES (?, ?, ?, ?)";
-                                            PreparedStatement stm = conn.prepareStatement(sqlInsertProduct);
-                                            stm.setString(1, id);
-                                            stm.setString(2, category);
-                                            stm.setString(3, name);
-                                            stm.setString(4, origin);
-                                            stm.executeUpdate();
-                                            
-                                            String sqlInsertPriceRecord = "INSERT IGNORE INTO price_record (Product_ID, Price, Price_Date) VALUES (?, ?, ?)";
-                                            PreparedStatement stmPrice = conn.prepareStatement(sqlInsertPriceRecord);
-                                            stmPrice.setString(1, id);
-                                            stmPrice.setString(2,price);
-                                            stmPrice.setDate(3, Date.valueOf(LocalDate.now()));
-                                            stmPrice.executeUpdate();
-                                            
-                                        
+                                            Products product = new Products(id, category, name, origin);
+                                            products_bus.addProducts(product);
+//                                            
+//                                            String sqlInsertProduct = "INSERT IGNORE INTO products (Product_ID, Group_Merchandise_ID, Product_Name, Origin) VALUES (?, ?, ?, ?)";
+//                                            PreparedStatement stm = conn.prepareStatement(sqlInsertProduct);
+//                                            stm.setString(1, id);
+//                                            stm.setString(2, category);
+//                                            stm.setString(3, name);
+//                                            stm.setString(4, origin);
+//                                            stm.executeUpdate();
                                         }
                                     }
                                     
@@ -395,7 +388,8 @@ public class PullDataTiki {
         return "";
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SQLException {
+       
         loadData();
         if(Products.isEmpty() && Price_Records.isEmpty() && Group_Merchandise.isEmpty()){
             System.out.println("EMPTY");
