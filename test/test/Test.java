@@ -21,7 +21,8 @@ public class Test extends javax.swing.JFrame {
         chart.setTitle("Chart Data");
         chart.addLegend("Amount", Color.decode("#7b4397"), Color.decode("#dc2430"));
         chart.addLegend("Cost", Color.decode("#e65c00"), Color.decode("#F9D423"));
-        chart.addLegend("Profit", Color.decode("#0099F7"), Color.decode("#F11712"));
+        chart.addLegend("Profit", Color.decode("#0099F7"), Color.decode("#F11712"));chart.addLegend("Profit", Color.decode("#0099F7"), Color.decode("#F11712"));
+        
         test();
     }
 
@@ -55,12 +56,12 @@ public class Test extends javax.swing.JFrame {
 
     private void test() {
         chart.clear();
-        chart.addData(new ModelChart("January", new double[]{500, 50, 100}));
-        chart.addData(new ModelChart("February", new double[]{600, 300, 150}));
-        chart.addData(new ModelChart("March", new double[]{200, 50, 900}));
-        chart.addData(new ModelChart("April", new double[]{480, 700, 100}));
-        chart.addData(new ModelChart("May", new double[]{350, 540, 500}));
-        chart.addData(new ModelChart("June", new double[]{450, 800, 100}));
+        chart.addData(new ModelChart("January", new double[]{500, 50, 100,30}));
+        chart.addData(new ModelChart("February", new double[]{600, 300, 150,30}));
+        chart.addData(new ModelChart("March", new double[]{200, 50, 900,30}));
+        chart.addData(new ModelChart("April", new double[]{480, 700, 100,30}));
+        chart.addData(new ModelChart("May", new double[]{350, 540, 500,30}));
+        chart.addData(new ModelChart("June", new double[]{450, 800, 100,30}));
         chart.start();
     }
 
