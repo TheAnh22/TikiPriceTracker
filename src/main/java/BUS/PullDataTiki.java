@@ -161,18 +161,56 @@ public class PullDataTiki {
             e.printStackTrace();
         }
         for (int i=0;i<Products.size();i++){
-            callAPI call=new callAPI(Products.get(i).getProductID(), conn, currentDate);
-            exService.execute(call);
+//            callAPI call=new callAPI(Products.get(i).getProductID(), conn, currentDate);
+//            exService.execute(call);
+                
+                String urlProduct = "https://tiki.vn/api/v2/products/"+ Products.get(i).getProductID();
+                System.out.println(urlProduct);
+                Request requestProduct = new Request.Builder()
+                    .url(urlProduct)
+                    .get()
+                    .build();
+                OkHttpClient client = new OkHttpClient();
+                try {
+                    Response responseProduct = client.newCall(requestProduct).execute();
+                        if (responseProduct.isSuccessful() && responseProduct.body() != null){
+                            String dataProduct = responseProduct.body().string();
+                            JsonElement element = JsonParser.parseString(dataProduct);
+                            if (element.isJsonObject()) {
+                                Gson gson = new Gson();
+                                JsonObject jsonObjectProduct = gson.fromJson(dataProduct, JsonObject.class);
+                                    String price = jsonObjectProduct.get("price").getAsString();
+                                    String sqlInsertPriceRecord = """
+                                                      INSERT INTO price_record (Product_ID, Price, Price_Date)
+                                                      SELECT ?, ?, ?
+                                                     WHERE NOT EXISTS (
+                                                              SELECT * FROM price_record WHERE Price_Date = ? AND Product_ID = ?
+                                                          )
+                                                      """;
+                                    PreparedStatement stm = conn.prepareStatement(sqlInsertPriceRecord);
+                                    stm.setString(1, Products.get(i).getProductID());
+                                    stm.setString(2, price);
+                                    stm.setDate(3, currentDate);
+                                    stm.setDate(4, currentDate);
+                                    stm.setString(5, Products.get(i).getProductID());
+                                    stm.executeUpdate();
+                            } else {
+
+                            }
+
+                        }
+                    } catch (Exception e) {
+                    }
         }
-        exService.shutdown();
-        try {
-            if(!exService.awaitTermination(60, TimeUnit.SECONDS)){
-                exService.shutdownNow();
-            }
-        } catch (Exception e) {
-            exService.shutdownNow();
-            
-        }
+//        exService.shutdown();
+//        try {
+//            if(!exService.awaitTermination(60, TimeUnit.SECONDS)){
+//                exService.shutdownNow();
+//            }
+//        } catch (Exception e) {
+//            exService.shutdownNow();
+//            
+//        }
         System.out.println("ALL DONE");
 
     }
@@ -347,6 +385,7 @@ public class PullDataTiki {
        Date currentDate = Date.valueOf(LocalDate.now());
         System.out.println(currentDate);
         loadData();
+        System.out.println(Products.size());
         if(Products.isEmpty() && Price_Records.isEmpty() && Group_Merchandise.isEmpty()&&Group_Mechandise_ID.isEmpty()){
             System.out.println("EMPTY");
         }else{
@@ -359,56 +398,5 @@ public class PullDataTiki {
         }
     }
     
-    public static class callAPI implements Runnable{
-        private  String id;
-        private  Connection conn;
-        private  Date currentDate;
-        public callAPI(String id,Connection conn,Date currentDate){
-        this.id=id;
-        this.conn=conn;
-        this.currentDate=currentDate;
-    }
-
-        @Override
-        public void run() {
-            System.out.println(Thread.currentThread().getName() + "bắt đầu. ID:" + id);
-            String urlProduct = "https://tiki.vn/api/v2/products/"+ id;
-            System.out.println(urlProduct);
-            Request requestProduct = new Request.Builder()
-                    .url(urlProduct)
-                    .get()
-                    .build();
-            OkHttpClient client = new OkHttpClient();
-            try {
-                Response responseProduct = client.newCall(requestProduct).execute();
-                if (responseProduct.isSuccessful() && responseProduct.body() != null){
-                    String dataProduct = responseProduct.body().string();
-                    JsonElement element = JsonParser.parseString(dataProduct);
-                    if (element.isJsonObject()) {
-                        Gson gson = new Gson();
-                        JsonObject jsonObjectProduct = gson.fromJson(dataProduct, JsonObject.class);
-                            String price = jsonObjectProduct.get("price").getAsString();
-                            String sqlInsertPriceRecord = """
-                                                      INSERT INTO price_record (Product_ID, Price, Price_Date)
-                                                      SELECT ?, ?, ?
-                                                     WHERE NOT EXISTS (
-                                                              SELECT * FROM price_record WHERE Price_Date = ? AND Product_ID = ?
-                                                          )
-                                                      """;
-                            PreparedStatement stm = conn.prepareStatement(sqlInsertPriceRecord);
-                            stm.setString(1, id);
-                            stm.setString(2, price);
-                            stm.setDate(3, currentDate);
-                            stm.setDate(4, currentDate);
-                            stm.setString(5, id);
-                            stm.executeUpdate();
-                    } else {
-                        
-                    }
-                    
-                }
-            } catch (Exception e) {
-            }
-        }
-    }
+   
 }
