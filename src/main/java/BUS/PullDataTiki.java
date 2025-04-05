@@ -9,7 +9,9 @@ import Objects.Group_Merchandise;
 import Objects.Price_Records;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -29,6 +31,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -36,6 +41,8 @@ import java.util.logging.Logger;
  *
  * @author The Anh
  */
+
+
 public class PullDataTiki {
 
     private int port;
@@ -92,6 +99,7 @@ public class PullDataTiki {
         Products = new ArrayList<>();
         Group_Merchandise = new ArrayList<>();
         Price_Records = new ArrayList<>();
+        Group_Mechandise_ID = new ArrayList<>();
         try {
             Connection conn = null;
             conn = DriverManager.getConnection(url, USER, PASSWORD);
@@ -114,6 +122,7 @@ public class PullDataTiki {
                 
                 Products product= new Products(Product_ID,Group_Merchandise_ID,Product_Name,Origin);
                 Products.add(product);
+                
             }
             while (rsSelectGroupMerchandise.next()){
                 String Group_Merchandise_ID = rsSelectGroupMerchandise.getString("Group_Merchandise_ID");
@@ -121,6 +130,7 @@ public class PullDataTiki {
                 
                 Group_Merchandise group_merchandise= new Group_Merchandise(Group_Merchandise_ID,Merchandise_Name);
                 Group_Merchandise.add(group_merchandise);
+                Group_Mechandise_ID.add(Group_Merchandise_ID);
             }
             while (rsSelectPriceRecord.next()){
                 int Product_Price_ID = rsSelectPriceRecord.getInt("Product_Price_ID");
@@ -131,84 +141,39 @@ public class PullDataTiki {
                 Price_Records price_record = new Price_Records(Product_Price_ID,Product_ID,Price,Price_Date);
                 Price_Records.add(price_record);
             }
+            
         } catch (SQLException ex) {
-            Logger.getLogger(PullDataTiki.class.getName()).log(Level.SEVERE, null, ex);
+                ex.printStackTrace();
         }
     }
     //Thêm giá vào database
     private static void addPriceRecordToDB() throws SQLException{
         Connection conn = null;
         conn = DriverManager.getConnection(url, USER, PASSWORD);
-        LocalDate now = LocalDate.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-        String sqlSelectDate = "SELECT * FROM price_record WHERE Price_Date='" + now.format(formatter) +"'";
+        ExecutorService exService = Executors.newFixedThreadPool(10);
+        Date currentDate = Date.valueOf(LocalDate.now());
         
-        PreparedStatement stmPriceSelect = conn.prepareStatement(sqlSelectDate);
-        ResultSet rs=stmPriceSelect.executeQuery();
-        if(rs.next()){
-            System.out.println("Thông tin đã cập nhật");
-        } else {
+        
                    try {
             conn = DriverManager.getConnection(url, USER, PASSWORD);
         } catch (SQLException e) {
             System.out.println("Lỗi kết nối đến cơ sở dữ liệu" );
             e.printStackTrace();
         }
-        for (int i=0; i< Group_Mechandise_ID.size();i++){
-            for (int page=0;page<10;page++){
-                String urlProduct = "https://tiki.vn/api/personalish/v1/blocks/listings?limit=40&category="+ Group_Mechandise_ID.get(i) +"&page="+Integer.toString(page);
-                System.out.println(urlProduct);
-                Request requestProduct = new Request.Builder()
-                    .url(urlProduct)
-                    .get()
-                    .build();
-                OkHttpClient client = new OkHttpClient();
-                try {
-                        Response responseProduct = client.newCall(requestProduct).execute();
-                        if (responseProduct.isSuccessful() && responseProduct.body() != null) {
-                            String dataProduct = responseProduct.body().string();
-                            // Parse JSON bằng Gson
-                            Gson gson = new Gson();
-                            JsonObject jsonObjectProduct = gson.fromJson(dataProduct, JsonObject.class);
-                            JsonArray array = jsonObjectProduct.getAsJsonArray("data");
-                            System.out.println(array.size());
-                                
-                                
-                                    for (Object object : array){
-                                        
-                                    JsonObject jsonObject=(JsonObject)object;
-                                    if (
-                                            jsonObject.has("name") &&
-                                            jsonObject.getAsJsonObject("visible_impression_info").getAsJsonObject("amplitude").has("origin") &&
-                                            jsonObject.has("id") &&
-                                            jsonObject.has("price")
-                                       ){
-                                            
-                                            String id = jsonObject.get("id").getAsString() ;
-                                            String price = jsonObject.get("price").getAsString();
-                                            Date currentDate = Date.valueOf(LocalDate.now());
-                                            
-                                            String sqlInsertPriceRecord = "INSERT IGNORE INTO price_record (Product_ID, Price, Price_Date) VALUES (?, ?, ?)";
-                                            PreparedStatement stmPrice = conn.prepareStatement(sqlInsertPriceRecord);
-                                            stmPrice.setString(1, id);
-                                            stmPrice.setString(2,price);
-                                            stmPrice.setDate(3, currentDate);
-                                            stmPrice.executeUpdate();
-                                           
-                                        
-                                        }
-                                    }
-                                    
-                        }
-                        
-                    } catch (Exception e) {
-                            e.printStackTrace();
-                            System.out.println("lỗi");
-                        }
+        for (int i=0;i<Products.size();i++){
+            callAPI call=new callAPI(Products.get(i).getProductID(), conn, currentDate);
+            exService.execute(call);
+        }
+        exService.shutdown();
+        try {
+            if(!exService.awaitTermination(60, TimeUnit.SECONDS)){
+                exService.shutdownNow();
             }
+        } catch (Exception e) {
+            exService.shutdownNow();
             
         }
-        }
+        System.out.println("ALL DONE");
 
     }
     //Thêm sản phẩm vào database    //Thêm sản phẩm vào database
@@ -224,51 +189,44 @@ public class PullDataTiki {
             e.printStackTrace();
         }
         
-        try {
-            String sql = "SELECT * FROM group_merchandise";
-            PreparedStatement prepareStament = conn.prepareStatement(sql);
-            ResultSet rs = prepareStament.executeQuery();
-            while (rs.next()){
-                Group_Mechandise_ID.add(rs.getString("Group_Merchandise_ID"));
-            }
-            for (int i = 0; i<Group_Mechandise_ID.size();i++){
-                
-                for (int page = 1; page<=10 ; page++){
-                    String urlProduct = "https://tiki.vn/api/personalish/v1/blocks/listings?limit=40&category="+ Group_Mechandise_ID.get(i) +"&page="+Integer.toString(page);
-                    System.out.println(urlProduct);
-                    Request requestProduct = new Request.Builder()
+        for (int i = 0; i<Group_Mechandise_ID.size();i++){
+            
+            for (int page = 1; page<=10 ; page++){
+                String urlProduct = "https://tiki.vn/api/personalish/v1/blocks/listings?limit=40&category="+ Group_Mechandise_ID.get(i) +"&page="+Integer.toString(page);
+                System.out.println(urlProduct);
+                Request requestProduct = new Request.Builder()
                         .url(urlProduct)
                         .get()
                         .build();
-                    OkHttpClient client = new OkHttpClient();
-                    
-                    try {
-                        Response responseProduct = client.newCall(requestProduct).execute();
-                        if (responseProduct.isSuccessful() && responseProduct.body() != null) {
-                            String dataProduct = responseProduct.body().string();
-                            // Parse JSON bằng Gson
-                            Gson gson = new Gson();
-                            JsonObject jsonObjectProduct = gson.fromJson(dataProduct, JsonObject.class);
-                            JsonArray array = jsonObjectProduct.getAsJsonArray("data");
-                            System.out.println(array.size());
-                                
-                                
-                                    for (int ob = 0;ob<array.size();ob++){
-                                        
-                                    JsonObject object=array.get(ob).getAsJsonObject();
-                                    if (
-                                            object.has("name") &&
-                                            object.getAsJsonObject("visible_impression_info").getAsJsonObject("amplitude").has("origin") &&
-                                            object.has("id") &&
-                                            object.has("price")
-                                       ){
-                                            String name = object.get("name").getAsString();
-                                            String origin = object.getAsJsonObject("visible_impression_info").getAsJsonObject("amplitude").get("origin").getAsString();
-                                            String id = object.get("id").getAsString() ;
-                                            String category = Group_Mechandise_ID.get(i);
-                                            String price = object.get("price").getAsString();
-                                            Products product = new Products(id, category, name, origin);
-                                            products_bus.addProducts(product);
+                OkHttpClient client = new OkHttpClient();
+                
+                try {
+                    Response responseProduct = client.newCall(requestProduct).execute();
+                    if (responseProduct.isSuccessful() && responseProduct.body() != null) {
+                        String dataProduct = responseProduct.body().string();
+                        // Parse JSON bằng Gson
+                        Gson gson = new Gson();
+                        JsonObject jsonObjectProduct = gson.fromJson(dataProduct, JsonObject.class);
+                        JsonArray array = jsonObjectProduct.getAsJsonArray("data");
+                        System.out.println(array.size());
+                        
+                        
+                        for (int ob = 0;ob<array.size();ob++){
+                            
+                            JsonObject object=array.get(ob).getAsJsonObject();
+                            if (
+                                    object.has("name") &&
+                                    object.getAsJsonObject("visible_impression_info").getAsJsonObject("amplitude").has("origin") &&
+                                    object.has("id") &&
+                                    object.has("price")
+                                    ){
+                                String name = object.get("name").getAsString();
+                                String origin = object.getAsJsonObject("visible_impression_info").getAsJsonObject("amplitude").get("origin").getAsString();
+                                String id = object.get("id").getAsString() ;
+                                String category = Group_Mechandise_ID.get(i);
+                                String price = object.get("price").getAsString();
+                                Products product = new Products(id, category, name, origin);
+                                products_bus.addProducts(product);
 //                                            
 //                                            String sqlInsertProduct = "INSERT IGNORE INTO products (Product_ID, Group_Merchandise_ID, Product_Name, Origin) VALUES (?, ?, ?, ?)";
 //                                            PreparedStatement stm = conn.prepareStatement(sqlInsertProduct);
@@ -277,21 +235,17 @@ public class PullDataTiki {
 //                                            stm.setString(3, name);
 //                                            stm.setString(4, origin);
 //                                            stm.executeUpdate();
-                                        }
-                                    }
-                                    
+                            }
                         }
                         
-                    } catch (Exception e) {
-                            e.printStackTrace();
-                            System.out.println("lỗi");
-                        }
-                }                 
-                
+                    }
+                    
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.out.println("lỗi");
+                }
             }
             
-        } catch (SQLException ex) {
-            Logger.getLogger(PullDataTiki.class.getName()).log(Level.SEVERE, null, ex);
         }
         
     }
@@ -389,17 +343,71 @@ public class PullDataTiki {
     }
 
     public static void main(String[] args) throws SQLException {
-       
+      
+       Date currentDate = Date.valueOf(LocalDate.now());
+        System.out.println(currentDate);
         loadData();
-        if(Products.isEmpty() && Price_Records.isEmpty() && Group_Merchandise.isEmpty()){
+        if(Products.isEmpty() && Price_Records.isEmpty() && Group_Merchandise.isEmpty()&&Group_Mechandise_ID.isEmpty()){
             System.out.println("EMPTY");
         }else{
             System.out.println("SUCCESS");
             try {
-                addProductsDataToDB();
                 addPriceRecordToDB();
             } catch (SQLException ex) {
                 ex.printStackTrace();
+            }
+        }
+    }
+    
+    public static class callAPI implements Runnable{
+        private  String id;
+        private  Connection conn;
+        private  Date currentDate;
+        public callAPI(String id,Connection conn,Date currentDate){
+        this.id=id;
+        this.conn=conn;
+        this.currentDate=currentDate;
+    }
+
+        @Override
+        public void run() {
+            System.out.println(Thread.currentThread().getName() + "bắt đầu. ID:" + id);
+            String urlProduct = "https://tiki.vn/api/v2/products/"+ id;
+            System.out.println(urlProduct);
+            Request requestProduct = new Request.Builder()
+                    .url(urlProduct)
+                    .get()
+                    .build();
+            OkHttpClient client = new OkHttpClient();
+            try {
+                Response responseProduct = client.newCall(requestProduct).execute();
+                if (responseProduct.isSuccessful() && responseProduct.body() != null){
+                    String dataProduct = responseProduct.body().string();
+                    JsonElement element = JsonParser.parseString(dataProduct);
+                    if (element.isJsonObject()) {
+                        Gson gson = new Gson();
+                        JsonObject jsonObjectProduct = gson.fromJson(dataProduct, JsonObject.class);
+                            String price = jsonObjectProduct.get("price").getAsString();
+                            String sqlInsertPriceRecord = """
+                                                      INSERT INTO price_record (Product_ID, Price, Price_Date)
+                                                      SELECT ?, ?, ?
+                                                     WHERE NOT EXISTS (
+                                                              SELECT * FROM price_record WHERE Price_Date = ? AND Product_ID = ?
+                                                          )
+                                                      """;
+                            PreparedStatement stm = conn.prepareStatement(sqlInsertPriceRecord);
+                            stm.setString(1, id);
+                            stm.setString(2, price);
+                            stm.setDate(3, currentDate);
+                            stm.setDate(4, currentDate);
+                            stm.setString(5, id);
+                            stm.executeUpdate();
+                    } else {
+                        
+                    }
+                    
+                }
+            } catch (Exception e) {
             }
         }
     }
