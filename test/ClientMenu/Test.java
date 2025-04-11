@@ -1,4 +1,4 @@
-package test;
+package ClientMenu;
 
 import java.awt.Color;
 import java.sql.PreparedStatement;
