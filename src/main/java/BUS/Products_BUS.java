@@ -20,4 +20,7 @@ public class Products_BUS {
     public void addProducts(Products product){
         products_dao.addProducts(product);
     }
+    public Products getOneProduct(String ID){
+        return products_dao.getOneProducts(ID);
+    }
 }

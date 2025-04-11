@@ -12,6 +12,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 
 /**
@@ -44,7 +45,7 @@ public class Price_Records_DAO {
                 String Price = rs.getString("Price");
                 Date Price_Date = rs.getDate("Price_Date");
                 
-                Price_Records price_record= new Price_Records(Product_Price_ID,Product_ID,Price,Price_Date);
+                Price_Records price_record= new Price_Records(Product_ID,Price,Price_Date);
                 Price_Records.add(price_record);
             }
             
@@ -52,5 +53,21 @@ public class Price_Records_DAO {
             ex.printStackTrace();
         }
         return Price_Records;
+    }
+    
+    public void addPriceRecord(Price_Records pricerecord){
+        try {
+            String query = """
+                           INSERT IGNORE INTO price_record (Product_ID, Price, Price_Date) VALUES ( ?, ?,?)
+                           """;
+            PreparedStatement stm = conn.prepareStatement(query);
+            
+            stm.setString(1, pricerecord.getProduct_ID());
+            stm.setString(2, pricerecord.getPrice());
+            stm.setDate(3, pricerecord.getPrice_Date());
+            stm.executeUpdate();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
     }
 }

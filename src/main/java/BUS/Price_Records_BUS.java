@@ -6,6 +6,7 @@ package BUS;
 
 import DAO.Price_Records_DAO;
 import Objects.Price_Records;
+import Objects.Price_Records;
 import java.util.ArrayList;
 
 /**
@@ -17,5 +18,8 @@ public class Price_Records_BUS {
     
     public ArrayList<Price_Records> getAllPriceRecord(){
         return price_records_dao.getAllPriceRecord();
+    }
+    public void addPriceRecords(Price_Records pricerecords){
+        price_records_dao.addPriceRecord(pricerecords);
     }
 }

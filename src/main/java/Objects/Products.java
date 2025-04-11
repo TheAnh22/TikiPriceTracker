@@ -14,6 +14,10 @@ public class Products {
     private String Product_Name;
     private String Origin;
     
+    public Products(){
+        
+    }
+    
     public Products(String Product_ID, String Group_Merchandise_ID, String Product_Name, String Origin){
         this.Product_ID = Product_ID;
         this.Group_Merchandise_ID = Group_Merchandise_ID;

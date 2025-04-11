@@ -53,6 +53,27 @@ public class Products_DAO {
         }
         return Products;
     }
+    public Products getOneProducts(String ID){
+        Products product = new Products();
+        try{
+            String query="""
+                         SELECT * FROM products where product_id = ?
+                         """;
+            PreparedStatement stm = conn.prepareStatement(query);
+            stm.setString(1, ID);
+            ResultSet rs =stm.executeQuery();
+            while(rs.next()){
+                String Product_ID = rs.getString("Product_ID");
+                String Group_Merchandise_ID = rs.getString("Group_Merchandise_ID");
+                String Product_Name = rs.getString("Product_Name");
+                String Origin = rs.getString("Origin");
+                product = new Products(Product_ID,Group_Merchandise_ID,Product_Name,Origin);
+            }
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        return product;
+    }
     public void addProducts(Products product){
         try {
             PreparedStatement stm = conn.prepareStatement("INSERT IGNORE INTO products (Product_ID, Group_Merchandise_ID, Product_Name, Origin) VALUES (?, ?, ?, ?)");

@@ -18,4 +18,7 @@ public class Group_Merchandise_BUS {
     public ArrayList<Group_Merchandise> getAllGroupMerchandise(){
         return group_merchandise_dao.getAllGroupMerchandise();
     }
+    public void addGroupMerchandise(String ID,String name){
+        group_merchandise_dao.addGroup_Merchandise(ID, name);
+    }
 }

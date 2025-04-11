@@ -4,67 +4,58 @@
  */
 package DAO;
 
-import Objects.Group_Merchandise;
-import Objects.Price_Records;
+
+import Objects.Picture;
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
  * @author The Anh
  */
-public class Group_Merchandise_DAO {
+public class Picture_DAO {
     private Connection conn;
     private static final String url="jdbc:mysql://localhost:3306/tiki";
     private static final String USER = "root";
     private static final String PASSWORD = "Atheanh123";
     private static final String dbname = "tiki";
-    public Group_Merchandise_DAO (){
+    private static ArrayList<Picture> Picture;
+    public Picture_DAO (){
         try {
             conn = DriverManager.getConnection(url, USER, PASSWORD);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-    public void addGroup_Merchandise(String ID,String name){
+    public void addPicture(String ID,String URL_Image){
         
         try {
-            String sql = "INSERT IGNORE INTO group_merchandise (Group_Merchandise_ID, Merchandise_Name) VALUES (?, ?)";
-            PreparedStatement stm= conn.prepareStatement(sql);
+            String sql = "INSERT IGNORE picture (Product_ID, URL_Image) VALUES (?, ?)";
             PreparedStatement preStatement = conn.prepareStatement(sql);
             preStatement.setString(1,ID);
-            preStatement.setString(2,name);
+            preStatement.setString(2,URL_Image);
             preStatement.executeUpdate();
         } catch (Exception ex) {
             
         }
     }
-    public ArrayList<Group_Merchandise> getAllGroupMerchandise(){
-        ArrayList<Group_Merchandise> Group_Merchandise = new ArrayList<>();
+    public ArrayList<Picture> getAllPicture(){
         try {
-            PreparedStatement stm= conn.prepareStatement("SELECT * FROM group_merchandise");
+            PreparedStatement stm= conn.prepareStatement("SELECT * FROM picture");
             ResultSet rs = stm.executeQuery();
             while (rs.next()){
-                
-                
-                String Group_Merchandise_ID = rs.getString("Group_Merchandise_ID");
-                String Merchandise_Name = rs.getString("Merchandise_Name");
-                
-                
-                Group_Merchandise group_merchandise= new Group_Merchandise(Group_Merchandise_ID,Merchandise_Name);
-                Group_Merchandise.add(group_merchandise);
+                String Product_ID = rs.getString("Product_ID");
+                String URL_Image = rs.getString("URL_Image");
+                Picture picture= new Picture(Product_ID,URL_Image);
+                Picture.add(picture);
             }
-            
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
-        return Group_Merchandise;
+        return Picture;
     }
 }
