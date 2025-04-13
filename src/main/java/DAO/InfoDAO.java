@@ -4,8 +4,8 @@
  */
 package DAO;
 
-
-import Objects.Picture;
+import Objects.ResponseInfo;
+import Objects.Products;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -17,45 +17,42 @@ import java.util.ArrayList;
  *
  * @author The Anh
  */
-public class Picture_DAO {
+public class InfoDAO {
     private Connection conn;
     private static final String url="jdbc:mysql://localhost:3306/tiki";
     private static final String USER = "root";
     private static final String PASSWORD = "Atheanh123";
     private static final String dbname = "tiki";
-    private static ArrayList<Picture> Picture =new ArrayList<>();
-    public Picture_DAO (){
+    public InfoDAO(){
         try {
             conn = DriverManager.getConnection(url, USER, PASSWORD);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-    public void addPicture(String ID,String URL_Image){
-        
+    public ArrayList<ResponseInfo> getInfo(String search){
+        ArrayList<ResponseInfo> list = new ArrayList<>();
+        String sql= """
+                    select p.Product_ID,p.Product_Name,p.Origin,pic.URL_Image from products p INNER JOIN picture pic on p.product_id = pic.product_id WHERE product_name  REGEXP ?
+                    """;
         try {
-            String sql = "INSERT IGNORE picture (Product_ID, URL_Image) VALUES (?, ?)";
-            PreparedStatement preStatement = conn.prepareStatement(sql);
-            preStatement.setString(1,ID);
-            preStatement.setString(2,URL_Image);
-            preStatement.executeUpdate();
-        } catch (Exception ex) {
-            
-        }
-    }
-    public ArrayList<Picture> getAllPicture(){
-        try {
-            PreparedStatement stm= conn.prepareStatement("SELECT * FROM picture");
+            PreparedStatement stm= conn.prepareStatement(sql);
+            stm.setString(1, search);
             ResultSet rs = stm.executeQuery();
             while (rs.next()){
+                
                 String Product_ID = rs.getString("Product_ID");
+                String Product_Name = rs.getString("Product_Name");
+                String Origin = rs.getString("Origin");
                 String URL_Image = rs.getString("URL_Image");
-                Picture picture= new Picture(Product_ID,URL_Image);
-                Picture.add(picture);
+                ResponseInfo info = new ResponseInfo(Product_ID, Product_Name, Origin, URL_Image);
+                list.add(info);
             }
+            
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
-        return Picture;
+        return list;        
     }
+
 }

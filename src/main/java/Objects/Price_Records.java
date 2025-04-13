@@ -4,18 +4,19 @@
  */
 package Objects;
 
+import java.io.Serializable;
 import java.sql.Date;
 
 /**
  *
  * @author The Anh
  */
-public class Price_Records {
+public class Price_Records implements Serializable{
     
     private String Product_ID;
     private String Price;
     private Date Price_Date;
-    
+    private static final long serialVersionUID = 1L;
     public Price_Records( String Product_ID, String Price, Date Price_Date){
         
         this.Product_ID = Product_ID;

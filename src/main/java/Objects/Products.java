@@ -4,16 +4,18 @@
  */
 package Objects;
 
+import java.io.Serializable;
+
 /**
  *
  * @author The Anh
  */
-public class Products {
+public class Products implements Serializable{
     private String Product_ID;
     private String Group_Merchandise_ID;
     private String Product_Name;
     private String Origin;
-    
+    private static final long serialVersionUID = 1L;
     public Products(){
         
     }

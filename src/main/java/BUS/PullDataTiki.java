@@ -4,10 +4,14 @@
 
 package BUS;
 
+import Objects.DataPacket;
 import Objects.Products;
 import Objects.Price_Records;
 import Objects.Group_Merchandise;
+import Objects.ResponseInfo;
+import Objects.Picture;
 import Objects.Price_Records;
+import Objects.RequestInfo;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -48,21 +52,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class PullDataTiki {
-    public static final AtomicInteger completedThreads = new AtomicInteger(0);
-    public static final AtomicInteger completedPull = new AtomicInteger(0);
+    
     
     private int port;
     
-   
+    
     private static ArrayList<String> Group_Mechandise_ID_Array;
     private static ArrayList<String> Products_ID_Array;
     private static ArrayList<Products> Products_Array;
     private static ArrayList<Price_Records> Price_Records_Array;
     private static ArrayList<Group_Merchandise> Group_Merchandise_Array;
+    private static ArrayList<Picture> Picture_Array;
+    private static ArrayList<ResponseInfo> Info_Array;
     private static Group_Merchandise_BUS group_merchandise_BUS;
     private static Products_BUS products_bus;
     private static Price_Records_BUS price_records_bus;
     private static Picture_BUS picture_bus;
+    private static ResponseInfoBUS infoBUS;
+    private static DataPacket data;
+    private static String search;
     public PullDataTiki(int port) {
         this.port = port;
     }
@@ -87,8 +95,16 @@ public class PullDataTiki {
         System.out.println("Đã chấp nhận kết nối từ client: " + socket.getRemoteSocketAddress());
         try ( ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
-                oos.writeObject(Group_Merchandise_Array);
-            
+                RequestInfo request = (RequestInfo) ois.readObject();
+                System.out.println("Server receive: "+request.getText());
+                
+                search = request.getText();
+                infoSearch(search);
+                
+                ArrayList<ResponseInfo> responseInfo = Info_Array;
+                oos.writeObject(responseInfo);
+                
+//                oos.writeObject(data);
         } catch (IOException e) {
             System.err.println("Lỗi kết nối từ client: " + e.getMessage());
         }
@@ -100,6 +116,8 @@ public class PullDataTiki {
             Group_Merchandise_Array=group_merchandise_BUS.getAllGroupMerchandise();
             Products_Array=products_bus.getAllProduct();
             Price_Records_Array=price_records_bus.getAllPriceRecord();
+            Picture_Array=picture_bus.getAllPicture();
+            data = new DataPacket(Products_Array, Price_Records_Array, Group_Merchandise_Array, Picture_Array);
             for (Group_Merchandise ob:Group_Merchandise_Array){
                 Group_Mechandise_ID_Array.add(ob.getGroup_Merchandise_ID());
             }
@@ -274,6 +292,10 @@ public class PullDataTiki {
         }
         
     }
+    private static void infoSearch(String search){
+        infoBUS =new ResponseInfoBUS();
+        Info_Array = infoBUS.getResponse(search);
+    }
     //Thêm các loại sản phẩm vào database
     private static void addGroupMerchandiseToDB(){
         
@@ -352,7 +374,11 @@ public class PullDataTiki {
         Products_Array = new ArrayList<>();
         Price_Records_Array = new ArrayList<>();
         Group_Merchandise_Array = new ArrayList<>();
+        Picture_Array =new ArrayList<>();
+        data = new DataPacket();
         loadData();
+        
+        
         PullDataTiki server = new PullDataTiki(12345);
         server.start();
         
