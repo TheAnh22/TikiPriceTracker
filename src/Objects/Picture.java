@@ -5,38 +5,28 @@
 package Objects;
 
 import java.io.Serializable;
-import java.sql.Date;
 
 /**
  *
  * @author The Anh
  */
-public class Price_Records implements Serializable {
-    
+public class Picture implements Serializable {
+
     private String Product_ID;
-    private String Price;
-    private Date Price_Date;
+    private String URL_Image;
     private static final long serialVersionUID = 1L;
-    public Price_Records( String Product_ID, String Price, Date Price_Date){
-        
+    public Picture(String Product_ID, String URL_Image) {
         this.Product_ID = Product_ID;
-        this.Price = Price;
-        this.Price_Date = Price_Date;
+        this.URL_Image = URL_Image;
     }
-
-   
-
     public String getProduct_ID() {
         return Product_ID;
     }
 
-    public String getPrice() {
-        return Price;
+    public String getURL_Image() {
+        return URL_Image;
     }
-
-    public Date getPrice_Date() {
-        return Price_Date;
-    }
+    
     
     
     

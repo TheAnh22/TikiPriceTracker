@@ -6,16 +6,33 @@ package ClientMenu;
 
 
 import Objects.ClientHandler;
+import Objects.DataPacket;
 import Objects.Group_Merchandise;
+import Objects.ResponseInfo;
+import Objects.Picture;
+import Objects.Price_Records;
+import Objects.Products;
 import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.GridLayout;
+import java.awt.Image;
 import java.awt.Point;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -32,37 +49,71 @@ import raven.panel.ProductPanel;
  */
 
 public class Main extends javax.swing.JFrame {
-    boolean isExpand = false ;
+    
     final Point clickPoint = new Point();
     private String host;
     private int port;
-    private static ArrayList<Group_Merchandise> Group_Merchandise;
+    
+    private static DataPacket data;
     private static String input;
     private int itemsPerPage = 3;
-    private int currentPage = 0;
-    private int totalPages = 0;
+    private int totalProduct = 0;
+    private int totalPage = 0;
     private ArrayList<String> items;
     private CardLayout card;
-    private JPanel createPagePanel(int pageIndex) {
-        JPanel panel = new JPanel(new GridLayout(3, 1, 10, 10));
-        panel.setOpaque(false);
-        int start = pageIndex * itemsPerPage;
-        int end = Math.min(start + itemsPerPage, items.size());
-
-        for (int i = start; i < end; i++) {
-            BorderPanel panelItem = new BorderPanel();
-            panel.add(panelItem);
-        }
-
-        return panel;
-    }
-
+    private FlowLayout flow;
+    private JPanel cardPanel;
+    private static ArrayList<Products> Products_Array;
+    private static ArrayList<Price_Records> Price_Records_Array;
+    private static ArrayList<Group_Merchandise> Group_Merchandise_Array;
+    private static ArrayList<Picture> Picture_Array;
+    private static ArrayList<ResponseInfo> Info_Array;
     
-    public Main() {
+    
+    public JPanel createPage (int index) throws MalformedURLException{
+        JPanel page = new JPanel(new GridLayout(itemsPerPage, 1));
+        
+        int firstProductInPage = index * itemsPerPage;
+        int lastProductInPage  = Math.min((firstProductInPage + itemsPerPage)-1, totalProduct-1);
+        for(int i = firstProductInPage;i<=lastProductInPage;i++){
+            JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT,10,10)); // căn trái, margin 10px
+            String imageUrl = Info_Array.get(i).getURL_Image(); // thay bằng URL thật
+            System.out.println(imageUrl);
+            URL url = new URL(imageUrl);
+            ImageIcon icon = new ImageIcon(url);
+             
+            panel.addComponentListener(new java.awt.event.ComponentAdapter() {
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                // Lấy kích thước hiện tại của panel
+                int height = panel.getHeight();
+
+                // Resize ảnh sao cho vừa với panel
+                Image scaledImage = icon.getImage().getScaledInstance(height-40, height-40, Image.SCALE_SMOOTH);
+                icon.setImage(scaledImage);
+
+                // Cập nhật JLabel với ảnh đã thay đổi kích thước
+                JLabel label = new JLabel(icon);
+                JLabel tag = new JLabel();
+                panel.removeAll(); // Xóa tất cả các component cũ
+                panel.add(label);   // Thêm ảnh mới vào
+                tag.setText("tag");
+                panel.add(tag);
+                panel.revalidate(); // Làm mới layout
+                panel.repaint();    // Vẽ lại
+                
+            }
+        });
+           
+            
+            page.add(panel);
+            
+        }
+        return page;
+    }
+    public Main() throws MalformedURLException, IOException {
         initComponents();
         
-        
-        
+
         this.setLayout(null);
         MenuBackround.setLayout(null);
         setBackground(new Color(0,0,0,0));
@@ -70,7 +121,7 @@ public class Main extends javax.swing.JFrame {
         MenuBackround.setSize(1080,720);
         barPanel.setLayout(null);
         barPanel.setLocation(0, 0);
-
+        
         SearchTextBox.setSize(540,30);
         SearchTextBox.setLocation(1080/4,10);
         barPanel.setSize(MenuBackround.getWidth(), 50); 
@@ -78,10 +129,8 @@ public class Main extends javax.swing.JFrame {
         windowControl.setSize(50, 50);
         searchButton.setSize(100, 30);
         searchButton.setLocation(810, 10);
-        cardPanel.setLocation(10, 60);
-        cardPanel.setSize(1060, 590);
-        navPanel.setLocation(270,660);
-        navPanel.setSize(540,50);
+        
+        
         setLocationRelativeTo(null);
         repaint();
     }
@@ -101,10 +150,7 @@ public class Main extends javax.swing.JFrame {
         windowControl = new raven.panel.WindowControlPanel();
         searchButton = new raven.panel.SearchButton();
         jLabel2 = new javax.swing.JLabel();
-        cardPanel = new raven.panel.BarPanel();
-        navPanel = new raven.panel.BorderPanel();
-        btnNext = new javax.swing.JButton();
-        btnPrevious = new javax.swing.JButton();
+        pictureLabel = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setBackground(new java.awt.Color(153, 255, 51));
@@ -194,75 +240,23 @@ public class Main extends javax.swing.JFrame {
                 .addContainerGap())
         );
 
-        javax.swing.GroupLayout cardPanelLayout = new javax.swing.GroupLayout(cardPanel);
-        cardPanel.setLayout(cardPanelLayout);
-        cardPanelLayout.setHorizontalGroup(
-            cardPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 341, Short.MAX_VALUE)
-        );
-        cardPanelLayout.setVerticalGroup(
-            cardPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 205, Short.MAX_VALUE)
-        );
-
-        btnNext.setText("Next");
-        btnNext.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                btnNextMouseClicked(evt);
-            }
-        });
-
-        btnPrevious.setText("Previous");
-        btnPrevious.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                btnPreviousMouseClicked(evt);
-            }
-        });
-
-        javax.swing.GroupLayout navPanelLayout = new javax.swing.GroupLayout(navPanel);
-        navPanel.setLayout(navPanelLayout);
-        navPanelLayout.setHorizontalGroup(
-            navPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(navPanelLayout.createSequentialGroup()
-                .addGap(42, 42, 42)
-                .addComponent(btnNext)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 139, Short.MAX_VALUE)
-                .addComponent(btnPrevious)
-                .addGap(73, 73, 73))
-        );
-        navPanelLayout.setVerticalGroup(
-            navPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, navPanelLayout.createSequentialGroup()
-                .addContainerGap(41, Short.MAX_VALUE)
-                .addGroup(navPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(btnNext)
-                    .addComponent(btnPrevious))
-                .addGap(36, 36, 36))
-        );
-
         javax.swing.GroupLayout MenuBackroundLayout = new javax.swing.GroupLayout(MenuBackround);
         MenuBackround.setLayout(MenuBackroundLayout);
         MenuBackroundLayout.setHorizontalGroup(
             MenuBackroundLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addComponent(barPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(MenuBackroundLayout.createSequentialGroup()
-                .addGap(206, 206, 206)
-                .addComponent(cardPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(566, 566, 566)
+                .addComponent(pictureLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 185, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MenuBackroundLayout.createSequentialGroup()
-                .addGap(193, 193, 193)
-                .addComponent(navPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(306, 387, Short.MAX_VALUE))
         );
         MenuBackroundLayout.setVerticalGroup(
             MenuBackroundLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(MenuBackroundLayout.createSequentialGroup()
                 .addComponent(barPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(31, 31, 31)
-                .addComponent(cardPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(87, 87, 87)
-                .addComponent(navPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(97, Short.MAX_VALUE))
+                .addGap(122, 122, 122)
+                .addComponent(pictureLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 133, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(265, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -281,7 +275,7 @@ public class Main extends javax.swing.JFrame {
 
     private void barPanelMousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_barPanelMousePressed
         // TODO add your handling code here:
-        
+
         clickPoint.x = evt.getX();
         clickPoint.y = evt.getY();
     }//GEN-LAST:event_barPanelMousePressed
@@ -292,52 +286,61 @@ public class Main extends javax.swing.JFrame {
         this.setLocation(currentLocation.x-clickPoint.x,currentLocation.y-clickPoint.y);
     }//GEN-LAST:event_barPanelMouseDragged
 
-    private void SearchTextBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SearchTextBoxActionPerformed
+    private void searchButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_searchButtonMouseClicked
         // TODO add your handling code here:
-    }//GEN-LAST:event_SearchTextBoxActionPerformed
+
+    }//GEN-LAST:event_searchButtonMouseClicked
+
+    private void jLabel2MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jLabel2MouseClicked
+        // TODO add your handling code here:
+        Objects.ClientHandler client =new ClientHandler("localhost", 12345);
+        String search = SearchTextBox.getText();
+        client.setSearch(search);
+        client.start();
+        Info_Array = client.getList();
+        card = new CardLayout();
+        cardPanel = new JPanel(card);
+        totalProduct =  Info_Array.size();
+        totalPage=(int)Math.ceil((double)totalProduct/itemsPerPage);      
+        cardPanel.setLocation(10, 60);
+        cardPanel.setSize(1060, 590);     
+        MenuBackround.add(cardPanel);
+        JPanel buttonPanel = new JPanel();
+
+        JButton btnPrevious = new JButton("← Trước");
+        JButton btnNext = new JButton("Tiếp →");
+        JButton btnToCard2 = new JButton("Đi tới thẻ 2");
+
+        buttonPanel.add(btnPrevious);
+        buttonPanel.add(btnNext);
+        buttonPanel.add(btnToCard2);
+
+        // Xử lý sự kiện nút
+        btnPrevious.addActionListener(e -> card.previous(cardPanel));
+        btnNext.addActionListener(e -> card.next(cardPanel));
+        
+        MenuBackround.add(buttonPanel);
+        buttonPanel.setLocation(270,660);
+        buttonPanel.setSize(540,50);
+        for(int i= 0; i<totalPage;i++){
+            try {
+                JPanel page = new JPanel();
+                page = createPage(i);
+                cardPanel.add(page, "page"+i);
+            } catch (MalformedURLException ex) {
+                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }//GEN-LAST:event_jLabel2MouseClicked
 
     private void windowControlMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_windowControlMouseClicked
         // TODO add your handling code here:
         System.exit(0);
     }//GEN-LAST:event_windowControlMouseClicked
 
-    private void btnPreviousMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btnPreviousMouseClicked
+    private void SearchTextBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SearchTextBoxActionPerformed
         // TODO add your handling code here:
-        if(currentPage > 0){
-            currentPage--;
-            card.show(cardPanel, "page"+currentPage);
-            
-        }
-    }//GEN-LAST:event_btnPreviousMouseClicked
-
-    private void btnNextMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_btnNextMouseClicked
-        // TODO add your handling code here:
-        if(currentPage < totalPages -1){
-            currentPage++;
-            card.show(cardPanel,"page"+currentPage);
-        }
-    }//GEN-LAST:event_btnNextMouseClicked
-
-    private void jLabel2MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jLabel2MouseClicked
-        // TODO add your handling code here:
-        items = new ArrayList<>();
-        for (int i = 0;i<23;i++){
-            items.add("Sản phẩm "+i);
-        }
-        totalPages = (int) Math.ceil((double)items.size()/itemsPerPage);
-        card=new CardLayout();
-        cardPanel.setLayout(card);
-        cardPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-         for (int i = 0; i < totalPages; i++) {
-            JPanel page = createPagePanel(i);
-            cardPanel.add(page, "page" + i);
-        } System.out.println("Clicked");
-    }//GEN-LAST:event_jLabel2MouseClicked
-
-    private void searchButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_searchButtonMouseClicked
-        // TODO add your handling code here:
-        
-    }//GEN-LAST:event_searchButtonMouseClicked
+    }//GEN-LAST:event_SearchTextBoxActionPerformed
 
     /**
      * @param args the command line arguments
@@ -365,17 +368,21 @@ public class Main extends javax.swing.JFrame {
             java.util.logging.Logger.getLogger(Main.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
-        Objects.ClientHandler client =new ClientHandler("localhost", 12345);
-        client.start();
-        Group_Merchandise = client.getList();
         
+                
         
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             @Override
             public void run() {
                
+                try {
                     new Main().setVisible(true);
+                } catch (MalformedURLException ex) {
+                    Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (IOException ex) {
+                    Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+                }
    
             }
         });
@@ -387,11 +394,8 @@ public class Main extends javax.swing.JFrame {
     private raven.panel.MenuPanel MenuBackround;
     private javax.swing.JTextField SearchTextBox;
     private raven.panel.BarPanel barPanel;
-    private javax.swing.JButton btnNext;
-    private javax.swing.JButton btnPrevious;
-    private raven.panel.BarPanel cardPanel;
     private javax.swing.JLabel jLabel2;
-    private raven.panel.BorderPanel navPanel;
+    private javax.swing.JLabel pictureLabel;
     private raven.panel.SearchButton searchButton;
     private raven.panel.WindowControlPanel windowControl;
     // End of variables declaration//GEN-END:variables

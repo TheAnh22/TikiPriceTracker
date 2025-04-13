@@ -20,13 +20,22 @@ import java.util.Scanner;
  * @author The Anh
  */
 public class ClientHandler {
-     private String host;
+    private String host;
     private int port;
-    private static final long serialVersionUID = 1L;
-    private static ArrayList<Group_Merchandise> list;
-
-    public static ArrayList<Group_Merchandise> getList() {
+    private static DataPacket data;
+    private static ArrayList<ResponseInfo> list;
+    private static String search;
+    public ArrayList<ResponseInfo> getList() {
         return list;
+    }
+
+    public void setSearch(String search) {
+        ClientHandler.search = search;
+    }
+    
+
+    public DataPacket getData(){
+        return data;
     }
     public ClientHandler(String host, int port) {
         this.host = host;
@@ -46,13 +55,15 @@ public class ClientHandler {
     private void startCommunication(Socket socket) {
         try ( ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
-            Object receive = ois.readObject();
-            if(receive instanceof ArrayList){
-                list = (ArrayList<Group_Merchandise>) receive;
-                
-            }
+            RequestInfo request = new RequestInfo(search);
+            oos.writeObject(request);
+            oos.flush();
+            list = (ArrayList<ResponseInfo>) ois.readObject();
+            
+            
         } catch (Exception e) {
             System.err.println("Lỗi kết nối từ client: " + e.getMessage());
+            e.printStackTrace();
         }
 
     }
@@ -60,6 +71,7 @@ public class ClientHandler {
     public static void main(String[] args)  {
 
        ClientHandler client = new ClientHandler("localhost", 12345);
-        client.start();
+       client.start();
+       
     }
 }
