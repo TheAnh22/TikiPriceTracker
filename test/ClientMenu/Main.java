@@ -14,11 +14,20 @@ import Objects.Price_Records;
 import Objects.Products;
 import java.awt.CardLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Image;
+import java.awt.Panel;
 import java.awt.Point;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -34,9 +43,13 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.SwingConstants;
+import javax.swing.SwingWorker;
+import javax.swing.border.Border;
 import raven.panel.BorderPanel;
 import raven.panel.ProductPanel;
 
@@ -56,13 +69,19 @@ public class Main extends javax.swing.JFrame {
     
     private static DataPacket data;
     private static String input;
-    private int itemsPerPage = 3;
+    private int itemsPerPage = 4;
     private int totalProduct = 0;
     private int totalPage = 0;
     private ArrayList<String> items;
     private CardLayout card;
     private FlowLayout flow;
+    private JButton next;
+    private JButton previous;
+    private JPanel btnPanel;
     private JPanel cardPanel;
+    private static String search;
+    private JFrame loadingFrame;
+    private static ClientHandler client;
     private static ArrayList<Products> Products_Array;
     private static ArrayList<Price_Records> Price_Records_Array;
     private static ArrayList<Group_Merchandise> Group_Merchandise_Array;
@@ -76,33 +95,77 @@ public class Main extends javax.swing.JFrame {
         int firstProductInPage = index * itemsPerPage;
         int lastProductInPage  = Math.min((firstProductInPage + itemsPerPage)-1, totalProduct-1);
         for(int i = firstProductInPage;i<=lastProductInPage;i++){
-            JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT,10,10)); // căn trái, margin 10px
+            JPanel panel = new JPanel();
+            panel.setLayout(new BoxLayout(panel,BoxLayout.X_AXIS));
+            Border border = BorderFactory.createLineBorder(Color.BLACK, 2);
+            panel.setBorder(border);
+            
             String imageUrl = Info_Array.get(i).getURL_Image(); // thay bằng URL thật
-            System.out.println(imageUrl);
-            URL url = new URL(imageUrl);
-            ImageIcon icon = new ImageIcon(url);
-             
+            if(imageUrl.isBlank()){
+                System.out.println("BLANK");
+            } else {
+                String info ="<html><div style='width:300px;'>"+ Info_Array.get(i).getProdcut_Name()+"</div></html>";
+                String originText = "<html><div style='width:100px;'>"+"Nguồn gốc: " +Info_Array.get(i).getOrigin()+"</div></html>";
+                String id = Info_Array.get(i).getProduct_ID();
+                System.out.println(imageUrl);
+                URL url = new URL(imageUrl);
+            
+                ImageIcon icon = new ImageIcon(url);
+            
             panel.addComponentListener(new java.awt.event.ComponentAdapter() {
             public void componentResized(java.awt.event.ComponentEvent e) {
                 // Lấy kích thước hiện tại của panel
                 int height = panel.getHeight();
-
+                
                 // Resize ảnh sao cho vừa với panel
                 Image scaledImage = icon.getImage().getScaledInstance(height-40, height-40, Image.SCALE_SMOOTH);
                 icon.setImage(scaledImage);
 
                 // Cập nhật JLabel với ảnh đã thay đổi kích thước
                 JLabel label = new JLabel(icon);
-                JLabel tag = new JLabel();
+                JLabel product_name = new JLabel();
+                JLabel origin = new JLabel();
+                JLabel product_ID=new JLabel();
                 panel.removeAll(); // Xóa tất cả các component cũ
-                panel.add(label);   // Thêm ảnh mới vào
-                tag.setText("tag");
-                panel.add(tag);
+                //Thêm ảnh vào
+                panel.add(Box.createHorizontalStrut(10));
+                panel.add(label);
+                panel.add(Box.createHorizontalStrut(10));
+                //Thêm tên sản phẩm vào
+                product_name.setText(info);
+                product_name.setFont(new Font("Arial", Font.BOLD, 20));
+                panel.add(product_name);
+                panel.add(Box.createHorizontalStrut(10));
+                //Thêm nguồn gốc vào
+                origin.setText(originText);
+                origin.setFont(new Font("Arial", Font.BOLD, 20));
+                panel.add(origin);
+                panel.add(Box.createHorizontalStrut(10));
+                //Thêm ID vào
+                panel.putClientProperty("id", id);
                 panel.revalidate(); // Làm mới layout
                 panel.repaint();    // Vẽ lại
-                
+                //hiện biểu đồ
+                panel.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        // In ra vị trí click
+                        
+                        System.out.println("Panel được nhấn tại: " + e.getPoint());
+                        Test test = new Test();
+                        test.setVisible(true);
+                        test.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                        String pid = (String) panel.getClientProperty("id")+"<SearchPrice>";
+                        System.out.println(pid);
+                        client.setSearch(pid);
+                        client.start();
+//                        JOptionPane.showMessageDialog(panel, "Bạn vừa nhấn vào panel!" + id);
+                    }
+                });
             }
         });
+            }
+            
            
             
             page.add(panel);
@@ -112,8 +175,38 @@ public class Main extends javax.swing.JFrame {
     }
     public Main() throws MalformedURLException, IOException {
         initComponents();
-        
+        loadingFrame = new JFrame("Đang tải...");
+        loadingFrame.setSize(300, 120);
+        loadingFrame.setLocationRelativeTo(null); // Căn giữa màn hình
+        loadingFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE); // Không cho đóng
+        loadingFrame.setUndecorated(true);
 
+        // Panel chính
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+                    
+
+        // Label thông báo
+        JLabel label = new JLabel("Đang tải sản phẩm...");
+        label.setAlignmentX(Component.CENTER_ALIGNMENT);
+        label.setFont(new Font("Arial", Font.PLAIN, 16));
+
+        // Progress bar chạy không xác định thời gian
+        JProgressBar progressBar = new JProgressBar();
+        progressBar.setIndeterminate(true);
+        progressBar.setAlignmentX(Component.CENTER_ALIGNMENT);
+        progressBar.setPreferredSize(new Dimension(250, 20));
+
+        // Thêm vào panel
+        contentPanel.add(label);
+        contentPanel.add(Box.createRigidArea(new Dimension(0, 15))); // khoảng cách
+        contentPanel.add(progressBar);
+
+        // Thêm panel vào frame
+        loadingFrame.add(contentPanel);
+
+        card = new CardLayout();
+        cardPanel = new JPanel(card);
         this.setLayout(null);
         MenuBackround.setLayout(null);
         setBackground(new Color(0,0,0,0));
@@ -124,11 +217,12 @@ public class Main extends javax.swing.JFrame {
         
         SearchTextBox.setSize(540,30);
         SearchTextBox.setLocation(1080/4,10);
+        
         barPanel.setSize(MenuBackround.getWidth(), 50); 
         windowControl.setLocation(barPanel.getWidth() - 50,0);
         windowControl.setSize(50, 50);
-        searchButton.setSize(100, 30);
-        searchButton.setLocation(810, 10);
+//        searchButton.setSize(100, 30);
+//        searchButton.setLocation(810, 10);
         
         
         setLocationRelativeTo(null);
@@ -148,8 +242,6 @@ public class Main extends javax.swing.JFrame {
         barPanel = new raven.panel.BarPanel();
         SearchTextBox = new javax.swing.JTextField();
         windowControl = new raven.panel.WindowControlPanel();
-        searchButton = new raven.panel.SearchButton();
-        jLabel2 = new javax.swing.JLabel();
         pictureLabel = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -182,38 +274,6 @@ public class Main extends javax.swing.JFrame {
             }
         });
 
-        searchButton.setOpaque(false);
-        searchButton.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                searchButtonMouseClicked(evt);
-            }
-        });
-
-        jLabel2.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
-        jLabel2.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel2.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel2.setLabelFor(searchButton);
-        jLabel2.setText("Search");
-        jLabel2.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                jLabel2MouseClicked(evt);
-            }
-        });
-
-        javax.swing.GroupLayout searchButtonLayout = new javax.swing.GroupLayout(searchButton);
-        searchButton.setLayout(searchButtonLayout);
-        searchButtonLayout.setHorizontalGroup(
-            searchButtonLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(searchButtonLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, 103, Short.MAX_VALUE)
-                .addContainerGap())
-        );
-        searchButtonLayout.setVerticalGroup(
-            searchButtonLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jLabel2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-        );
-
         javax.swing.GroupLayout barPanelLayout = new javax.swing.GroupLayout(barPanel);
         barPanel.setLayout(barPanelLayout);
         barPanelLayout.setHorizontalGroup(
@@ -221,8 +281,6 @@ public class Main extends javax.swing.JFrame {
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, barPanelLayout.createSequentialGroup()
                 .addGap(158, 158, 158)
                 .addComponent(SearchTextBox, javax.swing.GroupLayout.PREFERRED_SIZE, 406, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(searchButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(windowControl, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
         );
@@ -232,11 +290,8 @@ public class Main extends javax.swing.JFrame {
                 .addComponent(windowControl, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(0, 0, Short.MAX_VALUE))
             .addGroup(barPanelLayout.createSequentialGroup()
-                .addGroup(barPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, barPanelLayout.createSequentialGroup()
-                        .addContainerGap(20, Short.MAX_VALUE)
-                        .addComponent(SearchTextBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(searchButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(20, Short.MAX_VALUE)
+                .addComponent(SearchTextBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
 
@@ -286,53 +341,6 @@ public class Main extends javax.swing.JFrame {
         this.setLocation(currentLocation.x-clickPoint.x,currentLocation.y-clickPoint.y);
     }//GEN-LAST:event_barPanelMouseDragged
 
-    private void searchButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_searchButtonMouseClicked
-        // TODO add your handling code here:
-
-    }//GEN-LAST:event_searchButtonMouseClicked
-
-    private void jLabel2MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jLabel2MouseClicked
-        // TODO add your handling code here:
-        Objects.ClientHandler client =new ClientHandler("localhost", 12345);
-        String search = SearchTextBox.getText();
-        client.setSearch(search);
-        client.start();
-        Info_Array = client.getList();
-        card = new CardLayout();
-        cardPanel = new JPanel(card);
-        totalProduct =  Info_Array.size();
-        totalPage=(int)Math.ceil((double)totalProduct/itemsPerPage);      
-        cardPanel.setLocation(10, 60);
-        cardPanel.setSize(1060, 590);     
-        MenuBackround.add(cardPanel);
-        JPanel buttonPanel = new JPanel();
-
-        JButton btnPrevious = new JButton("← Trước");
-        JButton btnNext = new JButton("Tiếp →");
-        JButton btnToCard2 = new JButton("Đi tới thẻ 2");
-
-        buttonPanel.add(btnPrevious);
-        buttonPanel.add(btnNext);
-        buttonPanel.add(btnToCard2);
-
-        // Xử lý sự kiện nút
-        btnPrevious.addActionListener(e -> card.previous(cardPanel));
-        btnNext.addActionListener(e -> card.next(cardPanel));
-        
-        MenuBackround.add(buttonPanel);
-        buttonPanel.setLocation(270,660);
-        buttonPanel.setSize(540,50);
-        for(int i= 0; i<totalPage;i++){
-            try {
-                JPanel page = new JPanel();
-                page = createPage(i);
-                cardPanel.add(page, "page"+i);
-            } catch (MalformedURLException ex) {
-                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-    }//GEN-LAST:event_jLabel2MouseClicked
-
     private void windowControlMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_windowControlMouseClicked
         // TODO add your handling code here:
         System.exit(0);
@@ -340,8 +348,73 @@ public class Main extends javax.swing.JFrame {
 
     private void SearchTextBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SearchTextBoxActionPerformed
         // TODO add your handling code here:
+        
+        SearchTextBox.addKeyListener(new KeyAdapter(){
+            public void keyPressed(KeyEvent e){
+                if(e.getKeyCode() == KeyEvent.VK_ENTER){
+                    cardPanel.removeAll();
+                    search = SearchTextBox.getText() + "<SearchRequest>";
+
+                    loadingFrame.setVisible(true);
+                          
+                    cardPanel.setLocation(10, 60);
+                    cardPanel.setSize(1060, 590);     
+                    MenuBackround.add(cardPanel);
+                    MenuBackround.revalidate();
+                    MenuBackround.repaint();
+                    SwingWorker<Void, Void> worker = new SwingWorker<>() {
+                        @Override
+                        protected Void doInBackground() throws Exception {
+                            client.setSearch(search);
+                            client.start();
+                            Info_Array = client.getList();
+                            totalProduct =  Info_Array.size();
+                            totalPage=(int)Math.ceil((double)totalProduct/itemsPerPage);
+                            return null;
+                        }
+
+                        @Override
+                        protected void done() {
+                            cardPanel.removeAll();
+                            
+                            for(int i= 0; i<totalPage;i++){
+                            try {
+                                JPanel page = new JPanel();
+                                page = createPage(i);
+                                cardPanel.add(page, "page"+i);
+                            } catch (MalformedURLException ex) {
+                            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+                                }
+                            }
+                            btnPanel = new JPanel();
+                            previous = new JButton("← Trước");
+                            next = new JButton("Tiếp →");
+
+                            previous.addActionListener(ex -> card.previous(cardPanel));
+                            next.addActionListener(ex -> card.next(cardPanel));
+                            btnPanel.add(previous);
+                            btnPanel.add(next);
+                            MenuBackround.add(btnPanel);
+                            btnPanel.setLocation(270, 660);
+                            btnPanel.setSize(540, 50);
+
+                            // Hiển thị panel đầu tiên
+                            card.show(cardPanel, "page0");
+                            cardPanel.revalidate();
+                            cardPanel.repaint();
+                            loadingFrame.dispose();
+                        }  
+                    };
+                    worker.execute();
+                
+                
+                }
+            }
+        });
     }//GEN-LAST:event_SearchTextBoxActionPerformed
 
+    
+   
     /**
      * @param args the command line arguments
      */
@@ -368,7 +441,7 @@ public class Main extends javax.swing.JFrame {
             java.util.logging.Logger.getLogger(Main.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
-        
+        client =new ClientHandler("localhost", 12345);
                 
         
         /* Create and display the form */
@@ -394,9 +467,7 @@ public class Main extends javax.swing.JFrame {
     private raven.panel.MenuPanel MenuBackround;
     private javax.swing.JTextField SearchTextBox;
     private raven.panel.BarPanel barPanel;
-    private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel pictureLabel;
-    private raven.panel.SearchButton searchButton;
     private raven.panel.WindowControlPanel windowControl;
     // End of variables declaration//GEN-END:variables
 }

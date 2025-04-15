@@ -13,6 +13,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 /**
@@ -24,7 +25,13 @@ public class ClientHandler {
     private int port;
     private static DataPacket data;
     private static ArrayList<ResponseInfo> list;
+    private static ArrayList<ResponsePrice> price;
     private static String search;
+    public static ArrayList<ResponsePrice> getPrice() {
+        return price;
+    }
+    
+    
     public ArrayList<ResponseInfo> getList() {
         return list;
     }
@@ -32,7 +39,7 @@ public class ClientHandler {
     public void setSearch(String search) {
         ClientHandler.search = search;
     }
-    
+   
 
     public DataPacket getData(){
         return data;
@@ -55,10 +62,28 @@ public class ClientHandler {
     private void startCommunication(Socket socket) {
         try ( ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
+            
             RequestInfo request = new RequestInfo(search);
             oos.writeObject(request);
             oos.flush();
-            list = (ArrayList<ResponseInfo>) ois.readObject();
+            Object object = ois.readObject();
+            System.out.println(object.getClass());
+            
+            if(object instanceof List<?>){
+                List <?> check = (List <?>) object;
+                if(!check.isEmpty()){
+                    Object first = check.getFirst();
+                    if(first instanceof ResponsePrice){
+                        System.out.println("Mảng chứa price");
+                    } else if(first instanceof ResponseInfo){
+                        list = (ArrayList<ResponseInfo>) check;
+                        System.out.println("Mảng chứa info");
+                    }
+                }
+                
+            }else{
+                System.out.println("NOT ARRAY");
+            }
             
             
         } catch (Exception e) {
