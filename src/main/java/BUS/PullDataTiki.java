@@ -12,6 +12,7 @@ import Objects.ResponseInfo;
 import Objects.Picture;
 import Objects.Price_Records;
 import Objects.RequestInfo;
+import Objects.ResponsePrice;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -43,6 +44,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 
 /**
@@ -64,6 +66,7 @@ public class PullDataTiki {
     private static ArrayList<Group_Merchandise> Group_Merchandise_Array;
     private static ArrayList<Picture> Picture_Array;
     private static ArrayList<ResponseInfo> Info_Array;
+    private static ArrayList<ResponsePrice> Price_Array;
     private static Group_Merchandise_BUS group_merchandise_BUS;
     private static Products_BUS products_bus;
     private static Price_Records_BUS price_records_bus;
@@ -99,10 +102,24 @@ public class PullDataTiki {
                 System.out.println("Server receive: "+request.getText());
                 
                 search = request.getText();
-                infoSearch(search);
+                if(search.contains("<SearchRequest>")){
+                    search = search.replaceFirst(Pattern.quote("<SearchRequest>")+"$", "");
+                    infoSearch(search);
+                    ArrayList<ResponseInfo> responseInfo = Info_Array;
+                    oos.writeObject(responseInfo);
+                } else if(search.contains("<SearchPrice>")){
+                    search = search.replaceFirst(Pattern.quote("<SearchPrice>")+"$", "");
+                    priceSearch(search);
+                    System.out.println(search);
+                    ArrayList<ResponsePrice> responsePrice = Price_Array;
+                    System.out.println(Price_Array.getFirst().getProduct_ID());
+                    oos.writeObject(responsePrice);
+                } else {
+                    System.out.println("NONE");
+                }
                 
-                ArrayList<ResponseInfo> responseInfo = Info_Array;
-                oos.writeObject(responseInfo);
+                
+                
                 
 //                oos.writeObject(data);
         } catch (IOException e) {
@@ -115,7 +132,7 @@ public class PullDataTiki {
         try {
             Group_Merchandise_Array=group_merchandise_BUS.getAllGroupMerchandise();
             Products_Array=products_bus.getAllProduct();
-            Price_Records_Array=price_records_bus.getAllPriceRecord();
+//            Price_Records_Array=price_records_bus.getAllPriceRecord();
             Picture_Array=picture_bus.getAllPicture();
             data = new DataPacket(Products_Array, Price_Records_Array, Group_Merchandise_Array, Picture_Array);
             for (Group_Merchandise ob:Group_Merchandise_Array){
@@ -296,6 +313,10 @@ public class PullDataTiki {
         infoBUS =new ResponseInfoBUS();
         Info_Array = infoBUS.getResponse(search);
     }
+    private static void priceSearch(String id){
+        price_records_bus = new Price_Records_BUS();
+        Price_Array = price_records_bus.getAllPriceRecord(id);
+    }
     //Thêm các loại sản phẩm vào database
     private static void addGroupMerchandiseToDB(){
         
@@ -375,12 +396,12 @@ public class PullDataTiki {
         Price_Records_Array = new ArrayList<>();
         Group_Merchandise_Array = new ArrayList<>();
         Picture_Array =new ArrayList<>();
+        Price_Array = new ArrayList<>();
         data = new DataPacket();
         loadData();
         
         
-        PullDataTiki server = new PullDataTiki(12345);
-        server.start();
+       
         
 //        if(Products_Array.isEmpty() && Price_Records_Array.isEmpty() && Group_Merchandise_Array.isEmpty()&&Group_Mechandise_ID_Array.isEmpty()){
 //            System.out.println("EMPTY");
@@ -393,7 +414,8 @@ public class PullDataTiki {
 //                ex.printStackTrace();
 //          }
 //        }
-        
+        PullDataTiki server = new PullDataTiki(12345);
+        server.start();
     }
     
    

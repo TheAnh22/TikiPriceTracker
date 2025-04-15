@@ -6,6 +6,7 @@ package DAO;
 
 import Objects.Price_Records;
 import Objects.Products;
+import Objects.ResponsePrice;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.DriverManager;
@@ -33,10 +34,11 @@ public class Price_Records_DAO {
         }
     }
     
-    public ArrayList<Price_Records> getAllPriceRecord(){
-        ArrayList<Price_Records> Price_Records = new ArrayList<>();
+    public ArrayList<ResponsePrice> getAllPriceRecord(String id){
+        ArrayList<ResponsePrice> Price_Records = new ArrayList<>();
         try {
-            PreparedStatement stm= conn.prepareStatement("SELECT * FROM price_record");
+            PreparedStatement stm= conn.prepareStatement("SELECT * FROM price_record where product_id=?");
+            stm.setString(1, id);
             ResultSet rs = stm.executeQuery();
             while (rs.next()){
                 
@@ -45,7 +47,7 @@ public class Price_Records_DAO {
                 String Price = rs.getString("Price");
                 Date Price_Date = rs.getDate("Price_Date");
                 
-                Price_Records price_record= new Price_Records(Product_ID,Price,Price_Date);
+                ResponsePrice price_record= new ResponsePrice(Product_ID,Price,Price_Date);
                 Price_Records.add(price_record);
             }
             
