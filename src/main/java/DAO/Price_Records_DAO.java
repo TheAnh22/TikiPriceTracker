@@ -34,7 +34,7 @@ public class Price_Records_DAO {
         }
     }
     
-    public ArrayList<ResponsePrice> getAllPriceRecord(String id){
+    public ArrayList<ResponsePrice> getPriceRecordByID(String id){
         ArrayList<ResponsePrice> Price_Records = new ArrayList<>();
         try {
             PreparedStatement stm= conn.prepareStatement("SELECT * FROM price_record where product_id=?");
@@ -48,6 +48,26 @@ public class Price_Records_DAO {
                 Date Price_Date = rs.getDate("Price_Date");
                 
                 ResponsePrice price_record= new ResponsePrice(Product_ID,Price,Price_Date);
+                Price_Records.add(price_record);
+            }
+            
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        return Price_Records;
+    }
+    
+    public ArrayList<Price_Records> getAllPriceRecord(){
+        ArrayList<Price_Records> Price_Records = new ArrayList<>();
+        try {
+            PreparedStatement stm= conn.prepareStatement("SELECT * FROM price_record");
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()){
+                String Product_ID = rs.getString("Product_ID");
+                String Price = rs.getString("Price");
+                Date Price_Date = rs.getDate("Price_Date");
+                
+                Price_Records price_record= new Price_Records(Product_ID,Price,Price_Date);
                 Price_Records.add(price_record);
             }
             

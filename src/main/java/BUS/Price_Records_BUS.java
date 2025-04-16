@@ -17,8 +17,11 @@ import java.util.ArrayList;
 public class Price_Records_BUS {
     private Price_Records_DAO price_records_dao = new Price_Records_DAO();
     
-    public ArrayList<ResponsePrice> getAllPriceRecord(String id){
-        return price_records_dao.getAllPriceRecord(id);
+    public ArrayList<ResponsePrice> getPriceRecordByID(String id){
+        return price_records_dao.getPriceRecordByID(id);
+    }
+    public ArrayList<Price_Records> getAllPriceRecord(){
+        return price_records_dao.getAllPriceRecord();
     }
     public void addPriceRecords(Price_Records pricerecords){
         price_records_dao.addPriceRecord(pricerecords);

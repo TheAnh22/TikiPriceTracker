@@ -43,6 +43,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
@@ -56,7 +59,7 @@ import java.util.regex.Pattern;
 public class PullDataTiki {
     
     
-    private int port;
+    private static int port=12345;
     
     
     private static ArrayList<String> Group_Mechandise_ID_Array;
@@ -74,6 +77,7 @@ public class PullDataTiki {
     private static ResponseInfoBUS infoBUS;
     private static DataPacket data;
     private static String search;
+    
     public PullDataTiki(int port) {
         this.port = port;
     }
@@ -130,10 +134,10 @@ public class PullDataTiki {
     private static void loadData(){
         
         try {
-            Group_Merchandise_Array=group_merchandise_BUS.getAllGroupMerchandise();
-            Products_Array=products_bus.getAllProduct();
-//            Price_Records_Array=price_records_bus.getAllPriceRecord();
-            Picture_Array=picture_bus.getAllPicture();
+            Group_Merchandise_Array = group_merchandise_BUS.getAllGroupMerchandise();
+            Products_Array = products_bus.getAllProduct();
+            Price_Records_Array=price_records_bus.getAllPriceRecord();
+            Picture_Array = picture_bus.getAllPicture();
             data = new DataPacket(Products_Array, Price_Records_Array, Group_Merchandise_Array, Picture_Array);
             for (Group_Merchandise ob:Group_Merchandise_Array){
                 Group_Mechandise_ID_Array.add(ob.getGroup_Merchandise_ID());
@@ -315,7 +319,7 @@ public class PullDataTiki {
     }
     private static void priceSearch(String id){
         price_records_bus = new Price_Records_BUS();
-        Price_Array = price_records_bus.getAllPriceRecord(id);
+        Price_Array = price_records_bus.getPriceRecordByID(id);
     }
     //Thêm các loại sản phẩm vào database
     private static void addGroupMerchandiseToDB(){
@@ -386,6 +390,7 @@ public class PullDataTiki {
     }
 
     public static void main(String[] args) throws SQLException, ClassNotFoundException {
+        
         group_merchandise_BUS = new Group_Merchandise_BUS();
         products_bus = new Products_BUS();
         price_records_bus =new Price_Records_BUS();
@@ -401,21 +406,25 @@ public class PullDataTiki {
         loadData();
         
         
-       
+//        addPicture();
+//        addPriceRecordToDB();
         
-//        if(Products_Array.isEmpty() && Price_Records_Array.isEmpty() && Group_Merchandise_Array.isEmpty()&&Group_Mechandise_ID_Array.isEmpty()){
-//            System.out.println("EMPTY");
-//        }else{
-//           System.out.println("SUCCESS");
-//            try {
-//                addPicture();
-//                addPriceRecordToDB();
-//            } catch (SQLException ex) {
-//                ex.printStackTrace();
-//          }
-//        }
-        PullDataTiki server = new PullDataTiki(12345);
-        server.start();
+        ExecutorService pool = Executors.newFixedThreadPool(10);
+        
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
+            while (true) {                
+                System.out.println("Server đang lắng nghe tại cổng " + port);
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("[SERVER] Kết nối từ " + clientSocket.getInetAddress().getHostAddress());
+                ClientHandler handler = new ClientHandler(clientSocket);
+                pool.execute(handler);
+            }
+            
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        
     }
     
    
