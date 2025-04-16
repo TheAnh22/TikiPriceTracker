@@ -12,6 +12,7 @@ import Objects.ResponseInfo;
 import Objects.Picture;
 import Objects.Price_Records;
 import Objects.Products;
+import Objects.ResponsePrice;
 import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -82,11 +83,13 @@ public class Main extends javax.swing.JFrame {
     private static String search;
     private JFrame loadingFrame;
     private static ClientHandler client;
-    private static ArrayList<Products> Products_Array;
-    private static ArrayList<Price_Records> Price_Records_Array;
-    private static ArrayList<Group_Merchandise> Group_Merchandise_Array;
-    private static ArrayList<Picture> Picture_Array;
+//    private static ArrayList<Products> Products_Array;
+//    private static ArrayList<Price_Records> Price_Records_Array;
+//    private static ArrayList<Group_Merchandise> Group_Merchandise_Array;
+//    private static ArrayList<Picture> Picture_Array;
     private static ArrayList<ResponseInfo> Info_Array;
+    private static ArrayList<ResponsePrice> Price_Array;
+    private static ArrayList<String> Reviews;
     
     
     public JPanel createPage (int index) throws MalformedURLException{
@@ -125,7 +128,7 @@ public class Main extends javax.swing.JFrame {
                 JLabel label = new JLabel(icon);
                 JLabel product_name = new JLabel();
                 JLabel origin = new JLabel();
-                JLabel product_ID=new JLabel();
+                
                 panel.removeAll(); // Xóa tất cả các component cũ
                 //Thêm ảnh vào
                 panel.add(Box.createHorizontalStrut(10));
@@ -135,6 +138,7 @@ public class Main extends javax.swing.JFrame {
                 product_name.setText(info);
                 product_name.setFont(new Font("Arial", Font.BOLD, 20));
                 panel.add(product_name);
+                panel.putClientProperty("info", info);
                 panel.add(Box.createHorizontalStrut(10));
                 //Thêm nguồn gốc vào
                 origin.setText(originText);
@@ -152,14 +156,17 @@ public class Main extends javax.swing.JFrame {
                         // In ra vị trí click
                         
                         System.out.println("Panel được nhấn tại: " + e.getPoint());
-                        Test test = new Test();
-                        test.setVisible(true);
-                        test.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-                        String pid = (String) panel.getClientProperty("id")+"<SearchPrice>";
+                        String pid = (String) panel.getClientProperty("id")+"<SearchPrice><SearchReviews>";
+                        String title = (String) panel.getClientProperty("info");
                         System.out.println(pid);
                         client.setSearch(pid);
                         client.start();
-//                        JOptionPane.showMessageDialog(panel, "Bạn vừa nhấn vào panel!" + id);
+                        Price_Array = client.getPrice();
+                        Reviews = client.getReviews();
+                        CharFrame test = new CharFrame(Price_Array,title,Reviews);
+                        test.setVisible(true);
+                        test.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                        System.out.println(Price_Array.getLast().getPrice_Date());
                     }
                 });
             }
