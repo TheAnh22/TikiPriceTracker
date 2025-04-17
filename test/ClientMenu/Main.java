@@ -5,7 +5,7 @@
 package ClientMenu;
 
 
-import Objects.ClientHandler;
+import Objects.ClientHandler_Client;
 import Objects.DataPacket;
 import Objects.Group_Merchandise;
 import Objects.ResponseInfo;
@@ -82,7 +82,7 @@ public class Main extends javax.swing.JFrame {
     private JPanel cardPanel;
     private static String search;
     private JFrame loadingFrame;
-    private static ClientHandler client;
+    private static ClientHandler_Client client;
 //    private static ArrayList<Products> Products_Array;
 //    private static ArrayList<Price_Records> Price_Records_Array;
 //    private static ArrayList<Group_Merchandise> Group_Merchandise_Array;
@@ -163,6 +163,7 @@ public class Main extends javax.swing.JFrame {
                         client.start();
                         Price_Array = client.getPrice();
                         Reviews = client.getReviews();
+                        
                         CharFrame test = new CharFrame(Price_Array,title,Reviews);
                         test.setVisible(true);
                         test.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -448,7 +449,7 @@ public class Main extends javax.swing.JFrame {
             java.util.logging.Logger.getLogger(Main.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
-        client =new ClientHandler("localhost", 12345);
+        client =new ClientHandler_Client("localhost", 12345);
                 
         
         /* Create and display the form */
