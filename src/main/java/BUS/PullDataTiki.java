@@ -48,6 +48,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.SSLSocket;
 
 
 /**
@@ -416,7 +419,7 @@ public class PullDataTiki {
                 System.out.println("Server đang lắng nghe tại cổng " + port);
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("[SERVER] Kết nối từ " + clientSocket.getInetAddress().getHostAddress());
-                ClientHandler handler = new ClientHandler(clientSocket);
+                ClientHandler_Server handler = new ClientHandler_Server(clientSocket);
                 pool.execute(handler);
             }
             
